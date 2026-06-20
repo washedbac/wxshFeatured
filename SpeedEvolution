@@ -1,0 +1,118 @@
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TeleportGUI"
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Position = UDim2.new(0, 10, 0, 10)
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
+
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 25)
+titleBar.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = frame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Text = "Teleport Control"
+titleLabel.Size = UDim2.new(1, 0, 1, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.FontSize = Enum.FontSize.Size14
+titleLabel.TextScaled = true
+titleLabel.Parent = titleBar
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Text = "Teleport Toggle"
+toggleButton.Size = UDim2.new(0, 180, 0, 40)
+toggleButton.Position = UDim2.new(0, 10, 0, 35)
+toggleButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BorderSizePixel = 0
+toggleButton.Parent = frame
+
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+local pos1 = Vector3.new(7981, 206, 479)
+local pos2 = Vector3.new(7981, 206, 480)
+
+local isTeleporting = false
+local currentPos = pos1
+
+local moveAmount = Vector3.new(-0.5, 0, 0)
+local moveDuration = 0.2
+
+local function teleportWithMovement(pos)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    local rootPart = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+    if not rootPart then return end
+    
+    local originalPos = rootPart.Position
+    
+    local direction = pos - rootPart.Position
+    local distance = direction.Magnitude
+    
+    rootPart.CFrame = CFrame.new(pos)
+    
+    local leftCFrame = CFrame.new(pos + moveAmount)
+    rootPart.CFrame = leftCFrame
+    wait(moveDuration)
+    
+    local rightCFrame = CFrame.new(pos - moveAmount)
+    rootPart.CFrame = rightCFrame
+    wait(moveDuration)
+    
+    rootPart.CFrame = CFrame.new(originalPos)
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    isTeleporting = not isTeleporting
+    toggleButton.Text = isTeleporting and "Teleport ON" or "Teleport OFF"
+    
+    if isTeleporting then
+        while isTeleporting do
+            teleportWithMovement(currentPos)
+            wait(0.7)
+            currentPos = currentPos == pos1 and pos2 or pos1
+        end
+    end
+end)
+
+frame.Destroying:Connect(function()
+    isTeleporting = false
+end)
